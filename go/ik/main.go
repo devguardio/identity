@@ -21,7 +21,6 @@ func main() {
         Version:    "1",
     }
 
-    rootCmd.AddCommand(docCmd())
     rootCmd.AddCommand(tlsCmd())
 
     compat := &cobra.Command{

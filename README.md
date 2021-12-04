@@ -39,36 +39,10 @@ ik id
 ```
 
 
-### file signatures
+### sequential file signatures and encryption
 
+ik doc was moved to https://github.com/devguardio/ikdoc
 
-```
-$ echo hello > hello.txt
-$ ik doc sign hello.ikdoc --detached hello.txt
-
-$ ik doc verify hello.ikdoc -i $(ik id)
-GOOD
-
-$ echo hellu > hello.txt
-$ ik doc verify hello.ikdoc -i $(ik id) 
-BAD
-```
-
-
-### sequential anchors and multisig
-
-identitykit generalizes the devguard sequencer into an arbitrary trust anchor.
-Signatures carry information about the signee itself in the anchor section.
-It can require the next document to be signed by multiple keys, or add and remove authorized keys.
-The chain must be strictly sequential and it is NOT safe to use the ik cli concurrently.
-
-```
-$ ik doc sign hello1.ikdoc hello1.txt
-$ ik doc sign hello2.ikdoc hello2.txt --parent hello1.ikdoc
-$ ik doc verify hello1.ikdoc --identity $(ik id)
-$ ik doc verify hello2.ikdoc --parent hello1.ikdoc
-
-```
 
 ### using identity as x509 CA
 
