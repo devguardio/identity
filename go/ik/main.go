@@ -42,6 +42,19 @@ func main() {
         },
     });
     compat.AddCommand(&cobra.Command{
+        Use:        "hex2identity <hex>",
+        Short:      "convert a hex encoded public key seed to an ik identity",
+        Args:       cobra.MinimumNArgs(1),
+        Run: func(cmd *cobra.Command, args []string) {
+            decoded, err := hex.DecodeString(args[0])
+            if err != nil { panic(err) }
+            if len(decoded) < 32 {panic("must be at least 32 bytes long")}
+            var sk identity.Identity
+            copy(sk[:], decoded[:32])
+            fmt.Println(sk.String())
+        },
+    });
+    compat.AddCommand(&cobra.Command{
         Use:        "id32to58 <id>",
         Short:      "convert a b32 identity to a legacy b58",
         Args:       cobra.MinimumNArgs(1),
