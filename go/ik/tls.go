@@ -15,7 +15,10 @@ import (
     "net"
     "crypto/tls"
     "net/http"
+    "net/http/httputil"
     "io"
+    "net/url"
+    "strings"
 )
 
 func tlsCmd() *cobra.Command {
@@ -51,7 +54,7 @@ func tlsCmd() *cobra.Command {
 
     tlsCmd.AddCommand(&cobra.Command{
         Use:    "ca",
-        Short:  "export public key as x509 cert",
+        Short:  "export public key as signed x509 cert",
         Run: func(cmd *cobra.Command, args []string) {
             var vault = identity.Vault()
             if domain != "" { vault = vault.Domain(domain) }
@@ -170,6 +173,17 @@ func tlsCmd() *cobra.Command {
         Run: func(cmd *cobra.Command, args []string) {
 
             var vault = identity.Vault();
+
+            pub, err := vault.Identity();
+            if err != nil { panic(err) }
+
+            cert, err := pub.ToCertificate();
+            if err != nil { panic(err) }
+
+            rootCert, err := vault.SignCertificate(cert, pub);
+            if err != nil { panic(err) }
+
+
             if domain != "" { vault = vault.Domain(domain) }
             var tlsconfig = &tls.Config{
                 InsecureSkipVerify: true,
@@ -204,9 +218,12 @@ func tlsCmd() *cobra.Command {
                     der, err := vault.SignCertificate(cert, pub);
                     if err != nil { panic(err) }
 
+
+                    _ = rootCert
+
                     return &tls.Certificate{
                         PrivateKey: key.ToGo(),
-                        Certificate: [][]byte{der},
+                        Certificate: [][]byte{der, rootCert},
                     }, nil
                 },
                 ClientAuth: tls.RequireAnyClientCert,
@@ -222,37 +239,159 @@ func tlsCmd() *cobra.Command {
                 TLSConfig: tlsconfig,
             }
             log.Println("listening on 0.0.0.0:8443");
-            err := server.ListenAndServeTLS("", "")
+            err = server.ListenAndServeTLS("", "")
             if err != nil { panic(err) }
         },
     });
 
-    tlsCmd.AddCommand(&cobra.Command{
+    var expected_server_identity string
+    var headers []string
+    var printHeaders bool = false
+
+    var common = func(surl string) (*tls.Conn, error) {
+        vault := identity.Vault()
+        if domain != "" { vault = vault.Domain(domain) }
+        tlsconf, err := iktls.NewTlsClient(vault)
+        if err != nil { return nil, err }
+
+        tlsconf.VerifyPeerCertificate = iktls.VerifyPeerCertificate
+        tlsconf.InsecureSkipVerify = true
+
+        u, err := url.Parse(surl)
+        if err != nil { return nil, err }
+
+        tlsconf.ServerName, _, _ = net.SplitHostPort(u.Host)
+
+        dial, err := net.Dial("tcp", u.Host)
+        if err != nil { return nil, err }
+
+        tlsconn := tls.Client(dial, tlsconf)
+
+        err = tlsconn.Handshake()
+        if err != nil { return nil, err }
+
+        if expected_server_identity != "" {
+            cst := tlsconn.ConnectionState()
+            id := iktls.ClaimedPeerIdentity(&cst)
+            if id.String() != expected_server_identity {
+                return nil, fmt.Errorf("cannot verify remote identity: it is %s instead of %s", id.String(), expected_server_identity)
+            }
+        }
+
+        return tlsconn, nil
+    }
+
+
+    getCmd := &cobra.Command{
         Use:    "get <url>",
-        Short:  "https test client (does not check server cert!)",
+        Short:  "https test client",
         Args:   cobra.MinimumNArgs(1),
         Run: func(cmd *cobra.Command, args []string) {
 
-            vault := identity.Vault()
-            if domain != "" { vault = vault.Domain(domain) }
-            tls, err := iktls.NewTlsClient(vault)
+            tlsconn, err := common(args[0])
+            if err != nil {panic(err) }
+            defer tlsconn.Close();
+
+            conn := httputil.NewClientConn(tlsconn, nil)
+
+
+            req, err := http.NewRequest("GET", args[0], nil)
             if err != nil { panic(err) }
 
-            tls.InsecureSkipVerify = true
+            for _, v := range headers {
+                v2 := strings.Split(v, ":")
+                if len(v2) > 1 {
+                    req.Header.Add(v2[0], strings.Join(v2[1:], ":"))
+                }
+            }
 
-            client := &http.Client{Transport: &http.Transport{ TLSClientConfig: tls }}
-
-            resp, err := client.Get(args[0])
+            resp, err := conn.Do(req)
             if err != nil { panic(err) }
+
+            if printHeaders {
+                fmt.Fprintf(os.Stderr, "%s %s\n", resp.Proto, resp.Status);
+                for k,v := range resp.Header {
+                    for _, v := range v {
+                        fmt.Fprintf(os.Stderr, "%s: %s\n", k, v);
+                    }
+                }
+                fmt.Fprintf(os.Stderr, "\n")
+            }
 
             io.Copy(os.Stdout, resp.Body)
 
             if resp.StatusCode >= 300 {
+                if !printHeaders {
+                    fmt.Fprintf(os.Stderr, "%s %s\n", resp.Proto, resp.Status);
+                }
                 os.Exit(resp.StatusCode)
             }
+        },
+    };
+    getCmd.Flags().BoolVarP(&printHeaders, "include", "i",  false, "print headers to stderr")
+    getCmd.Flags().StringSliceVarP(&headers, "header", "H",  []string{}, "set request header")
+    getCmd.Flags().StringVarP(&expected_server_identity, "verify", "e",  "", "verify remote identity")
+    tlsCmd.AddCommand(getCmd)
+
+    conCmd := &cobra.Command{
+        Use:    "connect <url>",
+        Short:  "test client connecting stdio to a remote stream",
+        Args:   cobra.MinimumNArgs(1),
+        Run: func(cmd *cobra.Command, args []string) {
+
+            tlsconn, err := common(args[0])
+            if err != nil {panic(err) }
+            defer tlsconn.Close();
+
+            conn := httputil.NewClientConn(tlsconn, nil)
+
+            req, err := http.NewRequest("CONNECT", args[0], nil)
+            if err != nil { panic(err) }
+
+            for _, v := range headers {
+                v2 := strings.Split(v, ":")
+                if len(v2) > 1 {
+                    req.Header.Add(v2[0], strings.Join(v2[1:], ":"))
+                }
+            }
+
+            resp, err := conn.Do(req)
+            if err != nil { panic(err) }
+
+            if printHeaders {
+                fmt.Fprintf(os.Stderr, "%s %s\n", resp.Proto, resp.Status);
+                for k,v := range resp.Header {
+                    for _, v := range v {
+                        fmt.Fprintf(os.Stderr, "%s: %s\n", k, v);
+                    }
+                }
+                fmt.Fprintf(os.Stderr, "\n")
+            }
+
+            if resp.StatusCode >= 300 {
+                if !printHeaders {
+                    fmt.Fprintf(os.Stderr, "%s %s\n", resp.Proto, resp.Status);
+                }
+                io.Copy(os.Stderr, resp.Body)
+                os.Exit(resp.StatusCode)
+                return
+            }
+
+            connection, reader := conn.Hijack()
+            go func() {
+                defer connection.Close()
+                io.Copy(connection, os.Stdin)
+
+            }()
+            io.Copy(os.Stdout, reader);
 
         },
-    });
+    };
+
+    conCmd.Flags().BoolVarP(&printHeaders, "include", "i",  false, "print headers to stderr")
+    conCmd.Flags().StringSliceVarP(&headers, "header", "H",  []string{}, "set request header")
+    conCmd.Flags().StringVarP(&expected_server_identity, "verify", "e",  "", "verify remote identity")
+    tlsCmd.AddCommand(conCmd)
 
 
     return tlsCmd

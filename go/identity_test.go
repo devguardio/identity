@@ -3,6 +3,7 @@ package identity
 
 import (
     "testing"
+    "fmt"
 )
 
 func TestIdentityFromStringGarbage(t *testing.T) {
@@ -16,8 +17,9 @@ var secret_string   string = "cCOMZM5Z2HHCSVE65EDABQYXZHFA4AFH7NCTFG2VJ6V5OX7OXI
 var identity_string string = "cDFXSA73D3H4MOM7HPVUYWUOABQI7D5ERUR7QXOQPJD2HOYYSJCIYFWY";
 var sequence_string string = "+P5DQ";
 var sequence_value Serial = 18303
-var sequence2_string string = "+AE";
-var sequence2_value Serial = 1
+var sequence2_string string = "+AI";
+var sequence2_string2 string = "+ai";
+var sequence2_value Serial = 2
 var message_string string = "cDYCWQZLMNRXXO33SNRSNG"
 
 func TestSecret(t *testing.T) {
@@ -84,7 +86,22 @@ func TestSerial2(t *testing.T) {
     }
 
     if sk != sequence2_value {
-        t.Errorf("expected SerialFromString(s) == sv")
+        t.Errorf(fmt.Sprintf("expected SerialFromString(s) == sv | %v != %v", sk, sequence2_value))
+    }
+
+    if sk.String() != sequence2_string {
+        t.Errorf("expected SerialFromString(s).String() == s")
+    }
+}
+
+func TestSerial2b(t *testing.T) {
+    sk, err := SerialFromString(sequence2_string2);
+    if err != nil {
+        panic(err);
+    }
+
+    if sk != sequence2_value {
+        t.Errorf(fmt.Sprintf("expected SerialFromString(s) == sv | %v != %v", sk, sequence2_value))
     }
 
     if sk.String() != sequence2_string {

@@ -4,7 +4,7 @@ import (
     "github.com/devguardio/identity/go"
     "crypto/ed25519"
     "crypto/x509"
-    "time"
+    //"time"
     "errors"
     "crypto/tls"
 )
@@ -34,19 +34,34 @@ func VerifyPeerCertificate (certificates [][]byte, verifiedChains [][]*x509.Cert
             return errors.New("tls: failed to parse client certificate: " + err.Error())
         }
     }
+
+    var idCert *x509.Certificate
+
     if len(certs) == 0 {
         return errors.New("tls: client didn't provide a certificate")
+    } else if len(certs) == 1 {
+
+        // self signed
+        idCert = certs[0];
+
+    } else if len(certs) == 2 {
+
+        // the claimed id is the root cert, which is always last
+        idCert = certs[1];
+
+        // verify that the subcert is signed by the root
+        subCert := certs[0];
+
+        err = subCert.CheckSignatureFrom(idCert);
+        if err != nil { return errors.New("subcert not signed by root: " + err.Error()) }
+
+    } else {
+        return errors.New("tls: cert chains longer than 2 are difficult to argue about, so we don't support it")
     }
-
-
-    // the claimed id ca is the last certificate
-
-    var idCert = certs[len(certs)-1];
 
     pkey, ok := idCert.PublicKey.(ed25519.PublicKey);
-    if !ok {
-        return errors.New("tls: claimed identity not ed25519");
-    }
+    if !ok { return errors.New("tls: claimed identity not ed25519"); }
+
     var id identity.Identity;
     copy(id[:], pkey[:]);
 
@@ -55,38 +70,6 @@ func VerifyPeerCertificate (certificates [][]byte, verifiedChains [][]*x509.Cert
 
     err = idCert.CheckSignatureFrom(cacert);
     if err != nil { return errors.New("failed checking if client presented root is signed by the claimed identity: " + err.Error()) }
-
-
-    // now verify the first cert (for which the client has the key)
-    // is signed by a chain leading to the claimed id ca
-
-    var capool = x509.NewCertPool();
-    //TODO why does this not work? it shouldnt make a difference,
-    // because the idCert IS the thing we're checking,
-    // but i'd still prefer if we didnt use remote input
-
-    //capool.AddCert(cacert);
-    capool.AddCert(idCert);
-
-    var impool = x509.NewCertPool();
-
-    if len(certs) > 1 {
-        for _,im := range certs[1:len(certs)-1] {
-            impool.AddCert(im);
-        }
-    }
-
-    opts := x509.VerifyOptions{
-        Roots:          capool,
-        Intermediates:  impool,
-        CurrentTime:    time.Now(),
-        KeyUsages:      []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
-    }
-
-    _ , err = certs[0].Verify(opts)
-    if err != nil {
-        return errors.New("tls: failed to verify client certificate: " + err.Error())
-    }
 
     return nil
 }

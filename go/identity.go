@@ -34,7 +34,7 @@ type RSAPublic  rsa.PublicKey;   // type 8
 type Identity   [32]byte; // type 9
 
 type Signature  [64]byte; // type 10
-type Serial   uint64;   // type 11
+type Serial     uint64;   // type 11
 type Message    struct {Key string; Value []byte }  // type 14
 // type 15 reserved for extended type
 
@@ -442,7 +442,7 @@ func from_str(from  string, expect_type uint8, expected_size int) ([]byte, error
         return []byte{}, errors.New("cannot decode '"+from+"' : not a b32");
     }
 
-    b, err := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(from[1:])
+    b, err := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(strings.ToUpper(from[1:]))
     if err != nil {
         return nil, fmt.Errorf("base32 decoding error: %w",err)
     }

@@ -52,8 +52,8 @@ Unless you call 'ik pem' , the local secret remains cold.
 
 for example if you want to use cold identity that acts as a "CA" and emits hot server certs:
 
-ik ca > /tmp/ca.pem
-ik cert server.domain.com --dns localhost > /tmp/server.pem
+ik tls ca > /tmp/ca.pem
+ik tls cert server.domain.com --dns localhost > /tmp/server.pem
 openssl s_server -accept 8443 -www -cert /tmp/server.pem
 curl  https://localhost:8443   --cacert /tmp/ca.pem
 
