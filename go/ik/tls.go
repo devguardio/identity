@@ -111,7 +111,7 @@ func tlsCmd() *cobra.Command {
             var notAfter  = notBefore.Add(time.Hour * 87600)
 
             cert := &x509.Certificate{
-                SerialNumber: big.NewInt(1),
+                SerialNumber: big.NewInt(2),
                 Subject: pkix.Name{
                     Organization:           []string{"identitykit"},
                     CommonName:             args[0],
@@ -288,11 +288,14 @@ func tlsCmd() *cobra.Command {
         Args:   cobra.MinimumNArgs(1),
         Run: func(cmd *cobra.Command, args []string) {
 
-            tlsconn, err := common(args[0])
-            if err != nil {panic(err) }
-            defer tlsconn.Close();
 
-            conn := httputil.NewClientConn(tlsconn, nil)
+            client := &http.Client{
+                Transport: &http.Transport{
+                    DialTLS: func(network, addr string) (net.Conn, error) {
+                        return common(args[0])
+                    },
+                },
+            }
 
 
             req, err := http.NewRequest("GET", args[0], nil)
@@ -305,7 +308,7 @@ func tlsCmd() *cobra.Command {
                 }
             }
 
-            resp, err := conn.Do(req)
+            resp, err := client.Do(req)
             if err != nil { panic(err) }
 
             if printHeaders {

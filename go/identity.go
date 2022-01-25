@@ -98,8 +98,8 @@ func SecretFromString(from string) (*Secret, error) {
 
 // -- xsecret
 
-func CreateXSecret() (*Secret, error) {
-    var secret = Secret{};
+func CreateXSecret() (*XSecret, error) {
+    var secret = XSecret{};
     _, err := rand.Read(secret[:])
     return &secret, err;
 }
