@@ -15,6 +15,7 @@ import (
     "crypto/rsa"
     "crypto/x509"
     "encoding/binary"
+    "crypto/subtle"
 
     x25519   "github.com/oasisprotocol/curve25519-voi/primitives/x25519"
 	ed25519_ "github.com/oasisprotocol/curve25519-voi/primitives/ed25519"
@@ -288,6 +289,14 @@ func IdentityFromString(from string) (*Identity, error) {
     var r Identity;
     copy(r[:], a[:])
     return &r, nil;
+}
+
+func (self *Identity) Equal(other *Identity) bool {
+    cmp := 1
+    for i:=0;i<len(self);i++ {
+        cmp = cmp & subtle.ConstantTimeByteEq(self[i], other[i])
+    }
+	return cmp == 1
 }
 
 // -- address

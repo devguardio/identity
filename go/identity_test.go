@@ -120,3 +120,31 @@ func TestMessage(t *testing.T) {
         t.Errorf("expected MessageFromString(s).String() == s")
     }
 }
+
+
+func TestCompare(t *testing.T) {
+
+    id1, err := IdentityFromString(identity_string);
+    if err != nil { panic(err); }
+
+    id2, err := IdentityFromString(identity_string);
+    if err != nil { panic(err); }
+
+    sk, err := CreateSecret()
+    if err != nil { panic(err); }
+
+    id3, err := sk.Identity()
+    if err != nil { panic(err); }
+
+    if !id1.Equal(id1){
+        t.Errorf("not equal self");
+    }
+
+    if !id1.Equal(id2){
+        t.Errorf("not equal same fromstring");
+    }
+
+    if id2.Equal(id3){
+        t.Errorf("should not be equal random");
+    }
+}
