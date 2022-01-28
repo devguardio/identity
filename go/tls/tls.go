@@ -25,7 +25,17 @@ func ClaimedPeerIdentity(c*tls.ConnectionState) identity.Identity {
 }
 
 
+func VerifyPeerIdentity(expected *identity.Identity) func (certificates [][]byte, verifiedChains [][]*x509.Certificate) error {
+    return func (certificates [][]byte, verifiedChains [][]*x509.Certificate) error {
+        return verifyPeerIdentity(certificates, verifiedChains, []*identity.Identity{expected})
+    }
+}
+
 func VerifyPeerCertificate (certificates [][]byte, verifiedChains [][]*x509.Certificate) error {
+    return verifyPeerIdentity(certificates, verifiedChains, nil)
+}
+
+func verifyPeerIdentity(certificates [][]byte, verifiedChains [][]*x509.Certificate, trusted []*identity.Identity) error {
 
     certs := make([]*x509.Certificate, len(certificates))
     var err error
@@ -70,6 +80,16 @@ func VerifyPeerCertificate (certificates [][]byte, verifiedChains [][]*x509.Cert
 
     err = idCert.CheckSignatureFrom(cacert);
     if err != nil { return errors.New("failed checking if client presented root is signed by the claimed identity: " + err.Error()) }
+
+
+    if len(trusted) > 0 {
+        for _, trust := range trusted {
+            if trust.Equal(&id) {
+                return nil
+            }
+        }
+        return errors.New("unexpected remote identity " + id.String())
+    }
 
     return nil
 }

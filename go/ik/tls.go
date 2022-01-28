@@ -254,8 +254,19 @@ func tlsCmd() *cobra.Command {
         tlsconf, err := iktls.NewTlsClient(vault)
         if err != nil { return nil, err }
 
-        tlsconf.VerifyPeerCertificate = iktls.VerifyPeerCertificate
-        tlsconf.InsecureSkipVerify = true
+
+        if expected_server_identity != "" {
+
+            eid, err := identity.IdentityFromString(expected_server_identity)
+            if err != nil { return nil, fmt.Errorf("--verify %s : %w", expected_server_identity, err) }
+
+            tlsconf.VerifyPeerCertificate = iktls.VerifyPeerIdentity(eid)
+            tlsconf.InsecureSkipVerify = true
+        } else {
+            tlsconf.VerifyPeerCertificate = iktls.VerifyPeerCertificate
+            tlsconf.InsecureSkipVerify = true
+        }
+
 
         u, err := url.Parse(surl)
         if err != nil { return nil, err }
@@ -292,7 +303,9 @@ func tlsCmd() *cobra.Command {
             client := &http.Client{
                 Transport: &http.Transport{
                     DialTLS: func(network, addr string) (net.Conn, error) {
-                        return common(args[0])
+                        conn, err := common(args[0])
+                        if err != nil { panic(err) }
+                        return conn, nil
                     },
                 },
             }
