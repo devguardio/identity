@@ -1,7 +1,7 @@
 #include <string.h>
 #include <stdint.h>
-#include "base32.h"
-#include "error.h"
+#include "ik/base32.h"
+#include "ik/error.h"
 
 const char * ALPHABET   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 

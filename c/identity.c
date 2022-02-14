@@ -1,10 +1,11 @@
-#include "identity.h"
-#include "error.h"
-#include "rand.h"
-#include "crc8.h"
-#include "base32.h"
+#include "ik/identity.h"
+#include "ik/error.h"
+#include "ik/rand.h"
+#include "ik/crc8.h"
+#include "ik/base32.h"
 #include <string.h>
 #include <alloca.h>
+#include "crypto/ed25519/ed25519.h"
 
 int ik_secret_create(ik_secret * out) {
     return ik_rand((uint8_t*)out, 32);
@@ -113,5 +114,9 @@ int ik_from_string  (uint8_t *out, size_t outlen, const char *in, size_t inlen, 
     return r - 2;
 }
 
+int identity_from_secret (ik_identity *out, const ik_secret * in) {
+    ed25519_publickey(*in, *out);
+    return 0;
+}
 
 

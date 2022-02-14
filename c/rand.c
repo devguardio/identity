@@ -1,4 +1,4 @@
-#include "rand.h"
+#include "ik/rand.h"
 
 #if defined(__linux__) || defined(__APPLE__)
 
@@ -6,7 +6,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <errno.h>
-#include "error.h"
+#include "ik/error.h"
 
 #ifndef O_CLOEXEC
 #define O_CLOEXEC 0

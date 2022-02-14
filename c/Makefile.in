@@ -1,0 +1,13 @@
+here := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+
+
+IK_CFLAGS = \
+	-I$(here)/include/
+
+IK_SOURCES = \
+	$(here)/base32.c \
+	$(here)/crc8.c \
+	$(here)/identity.c \
+	$(here)/rand.c \
+	$(here)/tls.c \
+	$(here)/crypto/ed25519/ed25519.c
