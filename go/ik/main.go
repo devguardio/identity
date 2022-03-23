@@ -147,6 +147,17 @@ func main() {
         },
     });
 
+    rootCmd.AddCommand(&cobra.Command{
+        Use:    "mksecret",
+        Short:  "generate a secret",
+        Run: func(cmd *cobra.Command, args []string) {
+            sk, err := identity.CreateSecret()
+            if err != nil { panic(err) }
+
+            fmt.Println(sk.ToString())
+        },
+    });
+
 
     if err := rootCmd.Execute(); err != nil {
         os.Exit(1);

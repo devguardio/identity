@@ -1,6 +1,5 @@
 package identity
 
-
 import (
     "io/ioutil"
     "os"
@@ -11,7 +10,6 @@ import (
     "regexp"
 
 )
-
 
 type VaultI interface {
     Init(interactive bool) error
@@ -35,27 +33,6 @@ type FileVault struct {
     domain string
 }
 
-func DefaultPath(domain string) string {
-    var path = os.Getenv("IDENTITYKIT_PATH")
-    var err error
-
-    if path == "" {
-        path, err = os.UserHomeDir()
-        if err != nil  || path == "" {
-            path = "/root/"
-        }
-        path += "/.identitykit"
-    }
-
-    if domain != "" {
-        path += "/" + domain
-    }
-
-    os.MkdirAll(path, os.ModePerm)
-
-    return path;
-}
-
 func (self *FileVault) Domain(domain string) VaultI {
 
     reg, err := regexp.Compile("[^a-zA-Z0-9]+")
@@ -71,7 +48,9 @@ func (self *FileVault) Init(interactive bool)  error {
 
     var path2 = path + "/ed25519.secret"
     if _, err := os.Stat(path2); !os.IsNotExist(err) {
-        log.Println("NOT overriding existing ", path2)
+        if interactive {
+            log.Println("NOT overriding existing ", path2)
+        }
     } else {
 
         secret, err := CreateSecret()
@@ -84,7 +63,9 @@ func (self *FileVault) Init(interactive bool)  error {
 
     path2 = path + "/rsa.secret"
     if _, err := os.Stat(path2); !os.IsNotExist(err) {
-        log.Println("NOT overriding existing ", path2)
+        if interactive {
+            log.Println("NOT overriding existing ", path2)
+        }
     } else {
 
         secret, err := CreateRSASecret(3072)
