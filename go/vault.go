@@ -30,7 +30,7 @@ func Vault() VaultI {
     if sks != "" {
         sk, err := SecretFromString(sks)
         if err == nil {
-            return &StaticVault{secret : sk}
+            return sk
         } else {
             log.Println("IDENTITYKIT_SECRET", err)
         }
