@@ -338,6 +338,11 @@ func tlsCmd() *cobra.Command {
 			return nil, err
 		}
 
+		_, port, _ := net.SplitHostPort(u.Host)
+		if port == "" {
+			u.Host = u.Host + ":443"
+		}
+
 		tlsconf.ServerName, _, _ = net.SplitHostPort(u.Host)
 
 		dial, err := net.Dial("tcp", u.Host)
