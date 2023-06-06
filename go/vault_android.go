@@ -3,12 +3,11 @@
 package identity
 
 import (
-    "os"
+	"os"
 )
 
 func DefaultPath(domain string) string {
-    var path = "/data/identitykit"
-    os.MkdirAll(path, os.ModePerm)
-    return path;
+	var path = "/data/identitykit"
+	os.MkdirAll(path, os.ModePerm)
+	return path
 }
-

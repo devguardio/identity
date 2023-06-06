@@ -1,42 +1,46 @@
 package identity
 
 import (
-    "os"
-    "log"
-    "crypto/x509"
+	"crypto/x509"
+	"log"
+	"os"
 )
 
 type VaultI interface {
-    Init(interactive bool) error
+	Init(interactive bool) error
 
-    Domain(string) VaultI
+	Domain(string) VaultI
 
-    Identity()  (*Identity,     error)
-    XPublic()   (*XPublic,      error)
-    RSAPublic() (*RSAPublic,    error)
+	Identity() (*Identity, error)
+	XPublic() (*XPublic, error)
+	RSAPublic() (*RSAPublic, error)
 
-    Sign                (subject string, message []byte) (*Signature, error)
-    SignCertificate     (template * x509.Certificate, pub *Identity)    ([]byte, error)
-    SignRSACertificate  (template * x509.Certificate, pub *RSAPublic)   ([]byte, error)
+	// Deprecated: use SignContext instead, which is the standardized Ed25519ctx variant
+	Sign(context string, message []byte) (*Signature, error)
 
-    // will error for HSM, so use the other methods
-    ExportSecret()    (*Secret,     error)
-    ExportRSASecret() (*RSASecret,  error)
+	SignContext(context string, message []byte) (*Signature, error)
+	SignPrehashed(context string, sha512 []byte) (*Signature, error)
+
+	SignCertificate(template *x509.Certificate, pub *Identity) ([]byte, error)
+	SignRSACertificate(template *x509.Certificate, pub *RSAPublic) ([]byte, error)
+
+	// will error for HSM, so use the other methods
+	ExportSecret() (*Secret, error)
+	ExportRSASecret() (*RSASecret, error)
 }
 
 func Vault() VaultI {
 
-    sks := os.Getenv("IDENTITYKIT_SECRET")
-    if sks != "" {
-        sk, err := SecretFromString(sks)
-        if err == nil {
-            return sk
-        } else {
-            log.Println("IDENTITYKIT_SECRET", err)
-        }
-    }
+	sks := os.Getenv("IDENTITYKIT_SECRET")
+	if sks != "" {
+		sk, err := SecretFromString(sks)
+		if err == nil {
+			return sk
+		} else {
+			log.Println("IDENTITYKIT_SECRET", err)
+		}
+	}
 
-    var self = &FileVault{}
-    return self
+	var self = &FileVault{}
+	return self
 }
-

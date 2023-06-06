@@ -1,29 +1,28 @@
-//go:build (!android && !openwrt)
+//go:build !android && !openwrt
 
 package identity
 
 import (
-    "os"
+	"os"
 )
 
 func DefaultPath(domain string) string {
-    var path = os.Getenv("IDENTITYKIT_PATH")
-    var err error
+	var path = os.Getenv("IDENTITYKIT_PATH")
+	var err error
 
-    if path == "" {
-        path, err = os.UserHomeDir()
-        if err != nil  || path == "" {
-            path = "/root/"
-        }
-        path += "/.identitykit"
-    }
+	if path == "" {
+		path, err = os.UserHomeDir()
+		if err != nil || path == "" {
+			path = "/root/"
+		}
+		path += "/.identitykit"
+	}
 
-    if domain != "" {
-        path += "/" + domain
-    }
+	if domain != "" {
+		path += "/" + domain
+	}
 
-    os.MkdirAll(path, os.ModePerm)
+	os.MkdirAll(path, os.ModePerm)
 
-    return path;
+	return path
 }
-
